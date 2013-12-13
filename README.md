@@ -1,4 +1,4 @@
-S3Provider
-==========
+S3 Type Provider
+=======================
 
-Experimental type provider for Amazon S3
+An experimental type provider for **Amazon S3**
