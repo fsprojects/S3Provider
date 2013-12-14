@@ -2,7 +2,7 @@
 // FAKE build script 
 // --------------------------------------------------------------------------------------
 
-#r @"packages/FAKE/tools/FakeLib.dll"
+#r @"packages/FAKE.2.2.22.0/tools/FakeLib.dll"
 open Fake 
 open Fake.Git
 open Fake.AssemblyInfoFile
@@ -21,33 +21,32 @@ open System
 
 // The name of the project 
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
-let project = "FSharp.ProjectTemplate"
+let project = "S3Provider"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "A short summary of your project."
+let summary = "F# type provider for Amazon S3"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
 let description = """
-  A lengthy description of your project. 
-  This can have multiple lines and will be cleaned up. """
+  This library is for the .Net platform implementating a type provider for Amazon S3."""
 // List of author names (for NuGet package)
-let authors = [ "Your Name" ]
+let authors = [ "Yan Cui" ]
 // Tags for your project (for NuGet package)
-let tags = "F# fsharp tags which describe your project"
+let tags = "F# fsharp aws s3 amazon cloud"
 
 // File system information 
 // (<solutionFile>.sln is built during the building process)
-let solutionFile  = "FSharp.ProjectScaffold"
+let solutionFile  = "S3Provider"
 // Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = ["tests/*/bin/*/FSharp.ProjectTemplate*Tests*.dll"]
+let testAssemblies = ["tests/*/bin/*/S3Provider*Tests*.dll"]
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted 
-let gitHome = "https://github.com/pblasucci"
+let gitHome = "https://github.com/theburningmonk"
 // The name of the project on GitHub
-let gitName = "FSharp.ProjectScaffold"
+let gitName = "S3Provider"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 
