@@ -46,16 +46,16 @@ let getContent (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket
 
 module RuntimeHelper = 
     let getDateTime str = DateTime.Parse(str)
+    let getUtf8String   = System.Text.Encoding.UTF8.GetString
+    let getAsciiString  = System.Text.Encoding.ASCII.GetString
 
 let createTypedContent (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) (s3Object : Amazon.S3.Model.S3Object) = 
     let contents     = getContent client bucket s3Object
     let typedContent = runtimeType<string> "Content"
     typedContent.HideObjectMethods <- true
 
-    let utf8    = System.Text.Encoding.UTF8.GetString(contents)
-    let ascii   = System.Text.Encoding.ASCII.GetString(contents)
-    typedContent.AddMember(ProvidedProperty("UTF8", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ utf8 @@>)))
-    typedContent.AddMember(ProvidedProperty("ASCII", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ ascii @@>)))
+    typedContent.AddMemberDelayed(fun () -> ProvidedProperty("UTF8", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ RuntimeHelper.getUtf8String(contents) @@>)))
+    typedContent.AddMemberDelayed(fun () -> ProvidedProperty("ASCII", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ RuntimeHelper.getAsciiString(contents) @@>)))
     typedContent.AddMember(ProvidedProperty("Raw", typeof<byte[]>, IsStatic = true, GetterCode = (fun args -> <@@ contents @@>)))
     typedContent
 
