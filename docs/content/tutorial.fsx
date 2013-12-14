@@ -14,5 +14,5 @@ Say more
 open S3Provider
 
 (**
-Some more info
+Coming soon
 *)

@@ -4,7 +4,7 @@
 #I "../../bin"
 
 (**
-F# Project Scaffold
+S3 Provider
 ===================
 
 Documentation
@@ -59,9 +59,9 @@ The library is available under Public Domain license, which allows modification 
 redistribution for both commercial and non-commercial purposes. For more information see the 
 [License file][license] in the GitHub repository. 
 
-  [content]: https://github.com/pblasucci/FSharp.ProjectScaffold/tree/master/docs/content
-  [gh]: https://github.com/pblasucci/FSharp.ProjectScaffold
-  [issues]: https://github.com/pblasucci/FSharp.ProjectScaffold/issues
-  [readme]: https://github.com/pblasucci/FSharp.ProjectScaffold/blob/master/README.md
-  [license]: https://github.com/pblasucci/FSharp.ProjectScaffold/blob/master/LICENSE.txt
+  [content]: https://github.com/theburningmonk/S3Provider/tree/master/docs/content
+  [gh]: https://github.com/theburningmonk/S3Provider
+  [issues]: https://github.com/theburningmonk/S3Provider/issues
+  [readme]: https://github.com/theburningmonk/S3Provider/blob/master/README.md
+  [license]: https://github.com/theburningmonk/S3Provider/blob/master/LICENSE.txt
 *)
