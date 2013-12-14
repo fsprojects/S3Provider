@@ -1,12 +1,12 @@
-﻿module S3Provider.AssemblyInfo
-
-open System
+﻿namespace System
 open System.Reflection
 
-[<assembly: AssemblyTitle ("S3Provider")>]
-[<assembly: AssemblyDescription ("Experimental F# type provider for S3")>]
-[<assembly: AssemblyProduct ("S3Provider")>]
-[<assembly: AssemblyVersion ("0.0.0.1")>]
-[<assembly: AssemblyFileVersion ("0.0.0.1")>]
+[<assembly: AssemblyTitleAttribute("S3Provider")>]
+[<assembly: AssemblyProductAttribute("S3Provider")>]
+[<assembly: AssemblyDescriptionAttribute("F# type provider for Amazon S3")>]
+[<assembly: AssemblyVersionAttribute("0.0.1")>]
+[<assembly: AssemblyFileVersionAttribute("0.0.1")>]
+do ()
 
-()
+module internal AssemblyVersionInformation =
+    let [<Literal>] Version = "0.0.1"
