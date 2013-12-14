@@ -13,14 +13,14 @@ Documentation
   <div class="span1"></div>
   <div class="span6">
     <div class="well well-small" id="nuget">
-      The F# ProjectTemplate library can be <a href="https://nuget.org/packages/FSharp.ProjectTemplate">installed from NuGet</a>:
-      <pre>PM> Install-Package FSharp.ProjectTemplate</pre>
+      The S3Provider library can be <a href="https://nuget.org/packages/S3Provider">installed from NuGet</a>:
+      <pre>PM> Install-Package S3Provider</pre>
     </div>
   </div>
   <div class="span1"></div>
 </div>
 
-<img src="img/logo.png" alt="F# Project" style="float:right;width:150px;margin:10px" />
+<img src="img/logo.png" alt="S3 Provider" style="float:right;width:150px;margin:10px" />
 
 Example
 -------
@@ -28,10 +28,8 @@ Example
 This example demonstrates using a function defined in this sample library.
 
 *)
-#r "FSharp.ProjectTemplate.dll"
-open FSharp.ProjectTemplate
-
-printfn "hello = %i" <| Library.hello 0
+#r "S3Provider.dll"
+open Provider
 
 (**
 Some more info

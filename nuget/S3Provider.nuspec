@@ -5,7 +5,7 @@
     <version>@build.number@</version>
     <authors>@authors@</authors>
     <owners>@authors@</owners>
-    <licenseUrl>http://github.com/theburningmonk/S3Provider/blob/master/LICENSE</licenseUrl>
+    <licenseUrl>http://github.com/theburningmonk/S3Provider/blob/master/LICENSE.txt</licenseUrl>
     <projectUrl>http://github.com/theburningmonk/S3Provider</projectUrl>
     <iconUrl>https://raw.github.com/theburningmonk/S3Provider/master/nuget/logo.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

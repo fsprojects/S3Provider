@@ -4,17 +4,17 @@
 // --------------------------------------------------------------------------------------
 
 // Binaries that have XML documentation (in a corresponding generated XML file)
-let referenceBinaries = [ "FSharp.ProjectTemplate.dll" ]
+let referenceBinaries = [ "S3Provider.dll" ]
 // Web site location for the generated documentation
-let website = "/FSharp.ProjectScaffold"
+let website = "/S3Provider"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "FSharp.ProjectScaffold"
-    "project-author", "Your Name"
-    "project-summary", "A short summary of your project"
-    "project-github", "http://github.com/pblasucci/FSharp.ProjectScaffold"
-    "project-nuget", "http://nuget.com/packages/FSharp.ProjectScaffold" ]
+  [ "project-name", "S3Provider"
+    "project-author", "Yan Cui"
+    "project-summary", "A F# type provider for Amazon S3"
+    "project-github", "http://github.com/theburningmonk/S3Provider"
+    "project-nuget", "http://nuget.com/packages/S3Provider" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below
