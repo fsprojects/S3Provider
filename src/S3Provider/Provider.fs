@@ -23,10 +23,9 @@ module RuntimeHelper =
 [<AutoOpen>]
 module internal Helpers =
     type Prefix     = Prefix of string
-    type FolderName = FolderName of string
 
     type S3Entry =
-        | Folder    of Prefix * FolderName
+        | Folder    of Prefix
         | S3Object  of Amazon.S3.Model.S3Object
 
     let erasedType<'T> assemblyName rootNamespace typeName = 
@@ -62,7 +61,7 @@ module internal Helpers =
             if not <| String.IsNullOrWhiteSpace marker then req.Marker <- marker
 
             let response = client.ListObjects(req)
-            yield! response.CommonPrefixes |> Seq.map (fun folderName -> Folder(Prefix prefix, FolderName folderName))
+            yield! response.CommonPrefixes |> Seq.map (fun folderName -> Folder(Prefix folderName))
             yield! response.S3Objects |> Seq.map S3Object
         
             if not <| String.IsNullOrWhiteSpace response.NextMarker then yield! loop response.NextMarker
@@ -153,11 +152,10 @@ module internal Helpers =
         typedS3Object
 
     /// Create a nested type to represent a S3 folder
-    let rec createTypedS3Folder (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned prefix folderName =
-        let typedFolder = runtimeType<obj> folderName
-        typedFolder.AddXmlDoc(sprintf "A strongly typed interface to a S3 folder %s" folderName)
+    let rec createTypedS3Folder (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned prefix =
+        let typedFolder = runtimeType<obj> prefix
+        typedFolder.AddXmlDoc(sprintf "A strongly typed interface to a S3 folder %s" prefix)
 
-        let prefix = prefix + folderName
         typedFolder.AddMembersDelayed(fun () ->
             getObjects client bucket (Prefix prefix) 
             |> Seq.map (createTypedS3Entry typedFolder client bucket isVersioned) 
@@ -167,20 +165,49 @@ module internal Helpers =
 
     /// Create a nested type to represent a S3 entry (either Folder or S3Object)
     and createTypedS3Entry (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned = function
-        | Folder(Prefix prefix, FolderName folderName) -> createTypedS3Folder ownerType client bucket isVersioned prefix folderName
+        | Folder(Prefix prefix) -> createTypedS3Folder ownerType client bucket isVersioned prefix
         | S3Object(s3Object) when isVersioned -> createTypedVersionedS3Object ownerType client bucket s3Object
         | S3Object(s3Object) -> createTypedS3Object ownerType client bucket None s3Object
 
+    /// Create a nested parametric type to represent a Search
+    let createTypedSearch (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned =
+        let genericSearch = runtimeType<obj> "Search"
+        
+        let typeParams = [ ProvidedStaticParameter("prefix", typeof<string>) ]
+        let initFunction typeName (parameterValues : obj[]) =
+            match parameterValues with
+            | [| :? string as prefix |] ->
+                let typedSearch = runtimeType<obj> typeName
+                typedSearch.AddXmlDoc(sprintf "A strongly typed interface to a S3 search with prefix [%s]" prefix)
+                typedSearch.AddMembersDelayed(fun () ->
+                    getObjects client bucket (Prefix prefix)
+                    |> Seq.map (createTypedS3Entry typedSearch client bucket isVersioned)
+                    |> Seq.toList)
+
+                ownerType.AddMember(typedSearch)
+                typedSearch
+
+        genericSearch.DefineStaticParameters(parameters = typeParams, instantiationFunction = initFunction)
+        genericSearch
+
     /// Create a nested type to represent a S3 bucket
     let createTypedBucket (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) =
-        let typedBucket = runtimeType<obj> bucket.BucketName        
+        let typedBucket = runtimeType<obj> bucket.BucketName
         typedBucket.AddXmlDoc(sprintf "A strongly typed interface to S3 bucket %s which was created on %A" 
                                       bucket.BucketName bucket.CreationDate)
 
         typedBucket.AddMember(ProvidedProperty("CreationDate", typeof<DateTime>, IsStatic = true, GetterCode = (fun args -> <@@ bucket.CreationDate @@>)))
         typedBucket.AddMembersDelayed(fun () -> 
             let isVersioned = isBucketVersioned client bucket
-            getObjects client bucket (Prefix "") |> Seq.map (createTypedS3Entry typedBucket client bucket isVersioned) |> Seq.toList)
+            
+            let typedSearch = createTypedSearch typedBucket client bucket isVersioned
+
+            let typedEntries = 
+                getObjects client bucket (Prefix "") 
+                |> Seq.map (createTypedS3Entry typedBucket client bucket isVersioned)
+                |> Seq.toList
+                
+            typedSearch :: typedEntries)
 
         typedBucket
 
