@@ -6,7 +6,7 @@ An experimental type provider for **Amazon S3**.
 ### Example
 
     // create a type representing the S3 account with the specified AWS credentials
-    type S3 = S3Provider.SimpleStorageService<"AWS Key", "AWS Secret">
+    type S3 = S3Provider.Account<"AWS Key", "AWS Secret">
     
     // access meta-data and content of an objecct in S3 with full intellisense support!
     let etag = S3.``my.bucket``.``2013-12-13/My file.txt``.ETag

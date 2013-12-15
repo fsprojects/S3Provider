@@ -2,13 +2,13 @@
 //
 // ## Example
 //
-//      type S3  = S3Provider.SimpleStorageService<"AWS Key", "AWS Secret">
+//      type S3  = S3Provider.Account<"AWS Key", "AWS Secret">
 //      let etag = S3.``my.bucket``.``2013-12-13/My file.txt``.ETag
 //      let utf8 = S3.``my.bucket``.``2013-12-13/My file.txt``.Content.UTF8
 //      let raw  = S3.``my.bucket``.``2013-12-13/My image.png``.Content.Raw
 //      let lastModified = S3.``my.bucket``.``2013-12-13/My image.png``.LastModified
 //
-module Provider
+module AwsProviders
 
 open System
 open System.Reflection
@@ -163,7 +163,7 @@ let createTypedBucket (ownerType : ProvidedTypeDefinition) client (bucket : Amaz
     typedBucket
 
 let createTypedS3 () =
-    let typedS3 = erasedType<obj> thisAssembly rootNamespace "SimpleStorageService"
+    let typedS3 = erasedType<obj> thisAssembly rootNamespace "Account"
 
     let typeParams = [ ProvidedStaticParameter("awsKey", typeof<string>); ProvidedStaticParameter("awsSecret", typeof<string>) ]
     let initFunction (typeName : string) (parameterValues : obj[]) =
