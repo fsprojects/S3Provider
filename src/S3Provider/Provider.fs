@@ -15,6 +15,11 @@ open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 
+module RuntimeHelper = 
+    let getDateTime str = DateTime.Parse(str)
+    let getUtf8String   = System.Text.Encoding.UTF8.GetString
+    let getAsciiString  = System.Text.Encoding.ASCII.GetString
+
 [<AutoOpen>]
 module internal Helpers =
     let erasedType<'T> assemblyName rootNamespace typeName = 
@@ -84,11 +89,6 @@ module internal Helpers =
         use memStream = new System.IO.MemoryStream()
         response.ResponseStream.CopyTo(memStream)
         memStream.ToArray()
-
-    module RuntimeHelper = 
-        let getDateTime str = DateTime.Parse(str)
-        let getUtf8String   = System.Text.Encoding.UTF8.GetString
-        let getAsciiString  = System.Text.Encoding.ASCII.GetString
 
     /// Create a nested type to represent the content of a S3 object
     let createTypedContent (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) version (s3Object : Amazon.S3.Model.S3Object) = 
