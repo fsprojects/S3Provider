@@ -173,13 +173,14 @@ module internal Helpers =
 
     /// Create a nested type to represent a S3 bucket
     let createTypedBucket (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) =
-        let typedBucket = runtimeType<obj> bucket.BucketName
-        let isVersioned = isBucketVersioned client bucket
-        typedBucket.AddXmlDoc(sprintf "A strongly typed interface to S3 bucket %s which was created on %A, and %s versioned" 
-                                      bucket.BucketName bucket.CreationDate (if isVersioned then "is" else "is not"))
+        let typedBucket = runtimeType<obj> bucket.BucketName        
+        typedBucket.AddXmlDoc(sprintf "A strongly typed interface to S3 bucket %s which was created on %A" 
+                                      bucket.BucketName bucket.CreationDate)
 
         typedBucket.AddMember(ProvidedProperty("CreationDate", typeof<DateTime>, IsStatic = true, GetterCode = (fun args -> <@@ bucket.CreationDate @@>)))
-        typedBucket.AddMembersDelayed(fun () -> getObjects client bucket (Prefix "") |> Seq.map (createTypedS3Entry typedBucket client bucket isVersioned) |> Seq.toList)
+        typedBucket.AddMembersDelayed(fun () -> 
+            let isVersioned = isBucketVersioned client bucket
+            getObjects client bucket (Prefix "") |> Seq.map (createTypedS3Entry typedBucket client bucket isVersioned) |> Seq.toList)
 
         typedBucket
 
