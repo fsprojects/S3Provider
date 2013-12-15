@@ -133,7 +133,11 @@ Target "NuGet" (fun _ ->
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = hasBuildParam "nugetkey"
-            Dependencies = [] })
+            DependenciesByFramework = 
+                [ { FrameworkVersion  = "net40"
+                    Dependencies = 
+                        [ "AWSSDK",  GetPackageVersion "packages" "AWSSDK" ] }
+                ] })
         ("nuget/" + project + ".nuspec")
 )
 
@@ -175,9 +179,9 @@ Target "All" DoNothing
   ==> "All"
 
 "All" 
-  ==> "CleanDocs"
-  ==> "GenerateDocs"
-  ==> "ReleaseDocs"
+//  ==> "CleanDocs"
+//  ==> "GenerateDocs"
+//  ==> "ReleaseDocs"
   ==> "NuGet"
   ==> "Release"
 

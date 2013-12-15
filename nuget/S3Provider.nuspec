@@ -14,9 +14,9 @@
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>Copyright 2013</copyright>
     <tags>@tags@</tags>
-    <dependencies />
+    @dependencies@
   </metadata>
   <files>
-    <file src="S3Provider.dll" target="lib/net40" />
+    <file src="..\bin\S3Provider.dll" target="lib/net40" />
   </files>
 </package>
