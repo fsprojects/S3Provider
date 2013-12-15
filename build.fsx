@@ -180,7 +180,7 @@ Target "All" DoNothing
 
 "All" 
   ==> "CleanDocs"
-  ==> "GenerateDocs"
+//  ==> "GenerateDocs"
 //  ==> "ReleaseDocs"
   ==> "NuGet"
   ==> "Release"
