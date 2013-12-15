@@ -14,7 +14,7 @@ let info =
     "project-author", "Yan Cui"
     "project-summary", "A F# type provider for Amazon S3"
     "project-github", "http://github.com/theburningmonk/S3Provider"
-    "project-nuget", "http://nuget.com/packages/S3Provider" ]
+    "project-nuget", "http://nuget.org/packages/S3Provider" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below
