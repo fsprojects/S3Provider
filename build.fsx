@@ -179,7 +179,7 @@ Target "All" DoNothing
   ==> "All"
 
 "All" 
-//  ==> "CleanDocs"
+  ==> "CleanDocs"
 //  ==> "GenerateDocs"
 //  ==> "ReleaseDocs"
   ==> "NuGet"

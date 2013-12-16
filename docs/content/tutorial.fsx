@@ -11,7 +11,7 @@ Say more
 
 *)
 #r "S3Provider.dll"
-open S3Provider
+#r "AWSSDK.dll"
 
 (**
 Coming soon

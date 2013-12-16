@@ -29,7 +29,7 @@ This example demonstrates using a function defined in this sample library.
 
 *)
 #r "S3Provider.dll"
-open Provider
+#r "AWSSDK.dll"
 
 (**
 Some more info
