@@ -8,8 +8,26 @@ An experimental type provider for **Amazon S3**.
     // create a type representing the S3 account with the specified AWS credentials
     type S3 = S3Provider.Account<"AWS Key", "AWS Secret">
     
-    // access meta-data and content of an objecct in S3 with full intellisense support!
-    let etag = S3.``my.bucket``.``2013-12-13/My file.txt``.ETag
-    let utf8 = S3.``my.bucket``.``2013-12-13/My file.txt``.Content.UTF8
-    let raw  = S3.``my.bucket``.``2013-12-13/My image.png``.Content.Raw
-    let lastModified = S3.``my.bucket``.``2013-12-13/My image.png``.LastModified
+    // then access meta-data and content of objects in S3 with full intellisense support!
+
+	// immediately after the type representing the account are all the buckets
+    type bucket = S3.``my.bucket``
+
+	// you can then select folders/files from that bucket
+    type folder = bucket.``2013-12-13/``
+
+	// on files, you can get meta-data such as ETag, LastModified, or fetch the content as
+	//		* Raw   - raw binary array
+	//		* UTF8  - the content as decoded using UTF8
+	//		* ASCII - the content as decoded using ASCII
+    let etag = folder.``My file.txt``.ETag
+	let utf8 = folder.``My file.txt``.Content.UTF8
+	let raw  = folder.``My image.png``.Content.Raw
+	let lastModified = folder.``My image.png``.LastModified
+
+	// if the bucket/folder is large, you can also use the `Search<...>` generic type to find
+	// files in the bucket by prefix
+	type search = bucket.Search<"2013-12-">
+
+	// you can then navigate through the search results the same as before!
+	let searchResultContent = search.``2013-12-13``.``My file.txt``.Content.Raw
