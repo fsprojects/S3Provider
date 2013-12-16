@@ -3,10 +3,14 @@
 // ## Example
 //
 //      type S3  = S3Provider.Account<"AWS Key", "AWS Secret">
-//      let etag = S3.``my.bucket``.``2013-12-13/My file.txt``.ETag
-//      let utf8 = S3.``my.bucket``.``2013-12-13/My file.txt``.Content.UTF8
-//      let raw  = S3.``my.bucket``.``2013-12-13/My image.png``.Content.Raw
-//      let lastModified = S3.``my.bucket``.``2013-12-13/My image.png``.LastModified
+//      type bucket = S3.``my.bucket``
+//      type folder = bucket.``2013-12-13/``
+//      let etag = folder.``My file.txt``.ETag
+//      let utf8 = folder.``My file.txt``.Content.UTF8
+//      let raw  = folder.``My image.png``.Content.Raw
+//      let lastModified = folder.``My image.png``.LastModified
+//      type search = bucket.Search<"2013-12-">
+//      let searchResultContent = search.``2013-12-13``.``My file.txt``.Content.Raw
 //
 namespace AwsProviders
 
@@ -22,10 +26,11 @@ module RuntimeHelper =
 
 [<AutoOpen>]
 module internal Helpers =
-    type Prefix     = Prefix of string
+    type Prefix     = Prefix     of string
+    type FolderName = FolderName of string
 
     type S3Entry =
-        | Folder    of Prefix
+        | Folder    of Prefix * FolderName
         | S3Object  of Amazon.S3.Model.S3Object
 
     let erasedType<'T> assemblyName rootNamespace typeName = 
@@ -51,23 +56,38 @@ module internal Helpers =
         | "Enabled" | "Suspended" -> true
         | _ -> false
 
+    /// Returns a pretty name (without the folder prefixes) for the specified S3 object
+    let getPrettyS3ObjectName (s3Object : Amazon.S3.Model.S3Object) =
+        match s3Object.Key.LastIndexOf("/") with
+        | -1  -> s3Object.Key
+        | idx -> s3Object.Key.Substring(idx + 1)
+
+    /// Returns a pretty name (without the folder prefixes) for the specified S3 object
+    let getPrettyFolderName (Prefix prefix) =
+        match prefix.LastIndexOf('/', prefix.Length - 2, prefix.Length - 1) with
+        | -1  -> prefix
+        | idx -> prefix.Substring(idx + 1)
+
     /// Returns all the S3 objects in the specified S3 bucket
     let getObjects (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket) (Prefix prefix) =
-        let rec loop marker = seq {
-            let req = new Amazon.S3.Model.ListObjectsRequest()
-            req.BucketName <- bucket.BucketName
-            req.Prefix     <- prefix
-            req.Delimiter  <- "/"
-            if not <| String.IsNullOrWhiteSpace marker then req.Marker <- marker
+        let req = new Amazon.S3.Model.ListObjectsRequest()
+        req.BucketName <- bucket.BucketName
+        req.Prefix     <- prefix
+        req.MaxKeys    <- 1000
+        req.Delimiter  <- "/"
 
-            let response = client.ListObjects(req)
-            yield! response.CommonPrefixes |> Seq.map (fun folderName -> Folder(Prefix folderName))
+        let response = client.ListObjects(req)
+
+        let entries = seq {
+            yield! response.CommonPrefixes 
+                   |> Seq.map (fun prefix -> 
+                        let prefix = Prefix prefix
+                        Folder(prefix, FolderName <| getPrettyFolderName prefix))
             yield! response.S3Objects |> Seq.map S3Object
-        
-            if not <| String.IsNullOrWhiteSpace response.NextMarker then yield! loop response.NextMarker
         }
 
-        loop ""
+        // return whether or not there's more results, as well as the current set of results
+        response.IsTruncated, entries
 
     /// Returns all the versions for the specified S3 object
     let getObjectVersions (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket) (s3Object : Amazon.S3.Model.S3Object) =
@@ -118,7 +138,7 @@ module internal Helpers =
                 -> if s3ObjectVersion.IsLatest 
                    then sprintf "%s (Latest, %A)" s3ObjectVersion.VersionId s3ObjectVersion.LastModified
                    else sprintf "%s (%A)" s3ObjectVersion.VersionId s3ObjectVersion.LastModified
-            | _ -> s3Object.Key
+            | _ -> getPrettyS3ObjectName s3Object
         let typedS3Object = runtimeType<obj> typeName
         typedS3Object.AddXmlDoc(sprintf "A strongly typed interface to S3 object %s which is %d bytes in size" s3Object.Key s3Object.Size)
     
@@ -136,7 +156,7 @@ module internal Helpers =
 
     /// Create a nested type to represent a versioned S3 object
     let createTypedVersionedS3Object (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) (s3Object : Amazon.S3.Model.S3Object) =
-        let typedS3Object = runtimeType<obj> s3Object.Key
+        let typedS3Object = getPrettyS3ObjectName s3Object |> runtimeType<obj>
         typedS3Object.AddXmlDoc(sprintf "A strongly typed interface to a versioned S3 object %s" s3Object.Key)
 
         // nested type to represent the latest version of the object
@@ -152,22 +172,29 @@ module internal Helpers =
         typedS3Object
 
     /// Create a nested type to represent a S3 folder
-    let rec createTypedS3Folder (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned prefix =
-        let typedFolder = runtimeType<obj> prefix
+    let rec createTypedS3Folder (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned prefix folderName =
+        let typedFolder = runtimeType<obj> folderName
         typedFolder.AddXmlDoc(sprintf "A strongly typed interface to a S3 folder %s" prefix)
 
-        typedFolder.AddMembersDelayed(fun () ->
-            getObjects client bucket (Prefix prefix) 
-            |> Seq.map (createTypedS3Entry typedFolder client bucket isVersioned) 
-            |> Seq.toList)
+        typedFolder.AddMembersDelayed(fun () -> createTypedS3Entries typedFolder client bucket isVersioned prefix)
 
         typedFolder
 
     /// Create a nested type to represent a S3 entry (either Folder or S3Object)
-    and createTypedS3Entry (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned = function
-        | Folder(Prefix prefix) -> createTypedS3Folder ownerType client bucket isVersioned prefix
+    and createTypedS3Entry (ownerType : ProvidedTypeDefinition) client bucket isVersioned = function
+        | Folder(Prefix prefix, FolderName folderName) -> createTypedS3Folder ownerType client bucket isVersioned prefix folderName
         | S3Object(s3Object) when isVersioned -> createTypedVersionedS3Object ownerType client bucket s3Object
         | S3Object(s3Object) -> createTypedS3Object ownerType client bucket None s3Object
+
+    /// Create and return the list of nested types representing entries that are returned by the given prefix
+    and createTypedS3Entries (ownerType : ProvidedTypeDefinition) client bucket isVersioned prefix =
+        let (isTruncated, entries) = getObjects client bucket (Prefix prefix)
+
+        seq {
+            yield! entries |> Seq.map (createTypedS3Entry ownerType client bucket isVersioned)
+            if isTruncated then yield runtimeType<obj> "Too many results, use Search<...> instead"
+        }
+        |> Seq.toList
 
     /// Create a nested parametric type to represent a Search
     let createTypedSearch (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned =
@@ -179,10 +206,7 @@ module internal Helpers =
             | [| :? string as prefix |] ->
                 let typedSearch = runtimeType<obj> typeName
                 typedSearch.AddXmlDoc(sprintf "A strongly typed interface to a S3 search with prefix [%s]" prefix)
-                typedSearch.AddMembersDelayed(fun () ->
-                    getObjects client bucket (Prefix prefix)
-                    |> Seq.map (createTypedS3Entry typedSearch client bucket isVersioned)
-                    |> Seq.toList)
+                typedSearch.AddMembersDelayed(fun () -> createTypedS3Entries typedSearch client bucket isVersioned prefix)
 
                 ownerType.AddMember(typedSearch)
                 typedSearch
@@ -201,11 +225,7 @@ module internal Helpers =
             let isVersioned = isBucketVersioned client bucket
             
             let typedSearch = createTypedSearch typedBucket client bucket isVersioned
-
-            let typedEntries = 
-                getObjects client bucket (Prefix "") 
-                |> Seq.map (createTypedS3Entry typedBucket client bucket isVersioned)
-                |> Seq.toList
+            let typedEntries = createTypedS3Entries typedBucket client bucket isVersioned "" // use empty string as prefix for the top level bucket
                 
             typedSearch :: typedEntries)
 
