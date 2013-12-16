@@ -4,8 +4,8 @@
 #### 0.0.2 - December 16 2013
 * Support versioned buckets and show all versions of a S3 object
 * Support folder structures inside a bucket
-* Support the use of generic `Search<...>` types on buckets which filters keys by supplied prefix
+* Support the use of generic `Search` types on buckets which filters keys by supplied prefix
 * Object type names no longer has the prefix of parent folders
-* For large buckets, don't load everything, but push user to use the `Search<...>` type instead
-* `S3Provider.SimpleStorageService<...>` is renamed to `S3Provider.Account<...>`
+* For large buckets, don't load everything, but push user to use the `Search` type instead
+* `S3Provider.SimpleStorageService` is renamed to `S3Provider.Account`
 * Top level module `Provider` is made into a namespace and renamed to `AwsProviders`
