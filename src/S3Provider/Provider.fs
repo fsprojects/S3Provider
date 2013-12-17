@@ -136,8 +136,8 @@ module internal Helpers =
             | Some name, _ -> name 
             | _, (:? Amazon.S3.Model.S3ObjectVersion as s3ObjectVersion)
                 -> if s3ObjectVersion.IsLatest 
-                   then sprintf "%s (Latest, %A)" s3ObjectVersion.VersionId s3ObjectVersion.LastModified
-                   else sprintf "%s (%A)" s3ObjectVersion.VersionId s3ObjectVersion.LastModified
+                   then sprintf "(%s, Latest) %s" (s3ObjectVersion.LastModified.ToString("yyyy-MM-dd HH:mm:ss")) s3ObjectVersion.VersionId
+                   else sprintf "(%s) %s" (s3ObjectVersion.LastModified.ToString("yyyy-MM-dd HH:mm:ss")) s3ObjectVersion.VersionId
             | _ -> getPrettyS3ObjectName s3Object
         let typedS3Object = runtimeType<obj> typeName
         typedS3Object.AddXmlDoc(sprintf "A strongly typed interface to S3 object %s which is %d bytes in size" s3Object.Key s3Object.Size)
