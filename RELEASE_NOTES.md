@@ -9,3 +9,6 @@
 * For large buckets, don't load everything, but push user to use the `Search` type instead
 * `S3Provider.SimpleStorageService` is renamed to `S3Provider.Account`
 * Top level module `Provider` is made into a namespace and renamed to `AwsProviders`
+
+#### 0.0.3 - December 17 2013
+* Versions of a S3 object is sorted chronologically
