@@ -16,3 +16,6 @@
 #### 0.0.4 - December 18 2013
 * Removed dependency on AWSSDK
 * Fixed bug with getting data for versioned S3 object
+
+#### 0.0.5 - December 18 2013
+* Fixed bug with accessing the `CreationDate` on bucket types
