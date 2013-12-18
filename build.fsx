@@ -133,7 +133,7 @@ Target "NuGet" (fun _ ->
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = hasBuildParam "nugetkey"
-            Dependencies = []
+            Dependencies = [] })
         ("nuget/" + project + ".nuspec")
 )
 
