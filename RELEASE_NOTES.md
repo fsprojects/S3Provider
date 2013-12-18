@@ -12,3 +12,7 @@
 
 #### 0.0.3 - December 17 2013
 * Versions of a S3 object is sorted chronologically
+
+#### 0.0.4 - December 18 2013
+* Removed dependency on AWSSDK
+* Fixed bug with getting data for versioned S3 object

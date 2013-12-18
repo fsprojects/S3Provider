@@ -19,6 +19,9 @@ open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 
+open AwsProvider.S3
+open AwsProvider.S3.Model
+
 module RuntimeHelper = 
     let getDateTime str = DateTime.Parse(str)
     let getUtf8String   = System.Text.Encoding.UTF8.GetString
@@ -31,7 +34,7 @@ module internal Helpers =
 
     type S3Entry =
         | Folder    of Prefix * FolderName
-        | S3Object  of Amazon.S3.Model.S3Object
+        | S3Object  of IS3Object
 
     let erasedType<'T> assemblyName rootNamespace typeName = 
         ProvidedTypeDefinition(assemblyName, rootNamespace, typeName, Some(typeof<'T>), HideObjectMethods = true)
@@ -43,21 +46,15 @@ module internal Helpers =
     let rootNamespace = "S3Provider"
 
     /// Returns all the S3 buckets in the account
-    let getBuckets (client : Amazon.S3.IAmazonS3) =
-        let response = client.ListBuckets()
-        response.Buckets
+    let getBuckets awsCred =
+        let result = S3Utils.listBuckets awsCred
+        result.Buckets
 
     /// Returns whether or not the specified bucket has had versioning enabled at some point
-    let isBucketVersioned (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket) =
-        let req      = new Amazon.S3.Model.GetBucketVersioningRequest()
-        req.BucketName <- bucket.BucketName
-        let response = client.GetBucketVersioning(req)
-        match response.VersioningConfig.Status.Value with
-        | "Enabled" | "Suspended" -> true
-        | _ -> false
+    let isBucketVersioned awsCred (bucket : Bucket) = S3Utils.isBucketVersioned bucket.Name awsCred
 
     /// Returns a pretty name (without the folder prefixes) for the specified S3 object
-    let getPrettyS3ObjectName (s3Object : Amazon.S3.Model.S3Object) =
+    let getPrettyS3ObjectName (s3Object : IS3Object) =
         match s3Object.Key.LastIndexOf("/") with
         | -1  -> s3Object.Key
         | idx -> s3Object.Key.Substring(idx + 1)
@@ -69,59 +66,46 @@ module internal Helpers =
         | idx -> prefix.Substring(idx + 1)
 
     /// Returns all the S3 objects in the specified S3 bucket
-    let getObjects (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket) (Prefix prefix) =
-        let req = new Amazon.S3.Model.ListObjectsRequest()
-        req.BucketName <- bucket.BucketName
-        req.Prefix     <- prefix
-        req.MaxKeys    <- 1000
-        req.Delimiter  <- "/"
+    let getObjects awsCred (bucket : Bucket) (Prefix prefix) =
+        let result = S3Utils.listBucket bucket.Name prefix awsCred
 
-        let response = client.ListObjects(req)
+        let entries = 
+            [|
+                if result.CommonPrefixes <> null then
+                    yield! result.CommonPrefixes 
+                           |> Seq.map (fun prefixes -> 
+                                let prefix = Prefix prefixes.Prefix
+                                Folder(prefix, FolderName <| getPrettyFolderName prefix))
 
-        let entries = seq {
-            yield! response.CommonPrefixes 
-                   |> Seq.map (fun prefix -> 
-                        let prefix = Prefix prefix
-                        Folder(prefix, FolderName <| getPrettyFolderName prefix))
-            yield! response.S3Objects |> Seq.map S3Object
-        }
+                if result.S3Objects <> null then
+                    yield! result.S3Objects |> Seq.map (fun s3Obj -> s3Obj :> IS3Object |> S3Object)
+            |]
 
         // return whether or not there's more results, as well as the current set of results
-        response.IsTruncated, entries
+        result.IsTruncated, entries
 
     /// Returns all the versions for the specified S3 object
-    let getObjectVersions (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket) (s3Object : Amazon.S3.Model.S3Object) =
+    let getObjectVersions awsCred (bucket : Bucket) (s3Object : IS3Object) =
         let rec loop marker = seq {
-            let req = new Amazon.S3.Model.ListVersionsRequest()
-            req.BucketName <- bucket.BucketName
-            req.Prefix     <- s3Object.Key
-            if not <| String.IsNullOrWhiteSpace marker then req.VersionIdMarker <- marker
+            let result = S3Utils.listVersions bucket.Name s3Object.Key marker awsCred
+            yield! result.Versions
 
-            let response = client.ListVersions(req)
-            yield! response.Versions
-
-            if not <| String.IsNullOrWhiteSpace response.NextVersionIdMarker then yield! loop response.NextVersionIdMarker
+            if not <| String.IsNullOrWhiteSpace result.NextVersionIdMarker then yield! loop (Some result.NextVersionIdMarker)
         }
 
-        loop ""
+        loop None |> Seq.toArray
 
     /// Returns the content (byte[]) of a S3 obejct
-    let getContent (client : Amazon.S3.IAmazonS3) (bucket : Amazon.S3.Model.S3Bucket) version (s3Object : Amazon.S3.Model.S3Object) =
-        let req = new Amazon.S3.Model.GetObjectRequest()
-        req.BucketName <- bucket.BucketName
-        req.Key        <- s3Object.Key
-        match version with
-        | Some versionId -> req.VersionId <- versionId
-        | _ -> ()
+    let getContent awsCred (bucket : Bucket) (s3Object : IS3Object) =
+        let version = match s3Object with
+                      | :? IS3ObjectVersion as objVersion -> Some objVersion.VersionId
+                      | _ -> None
 
-        let response  = client.GetObject(req)
-        use memStream = new System.IO.MemoryStream()
-        response.ResponseStream.CopyTo(memStream)
-        memStream.ToArray()
+        S3Utils.getContent bucket.Name s3Object.Key version awsCred
 
     /// Create a nested type to represent the content of a S3 object
-    let createTypedContent (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) version (s3Object : Amazon.S3.Model.S3Object) = 
-        let contents     = getContent client bucket version s3Object
+    let createTypedContent (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) (s3Object : IS3Object) = 
+        let contents     = getContent awsCred bucket s3Object
         let typedContent = runtimeType<obj> "Content"
 
         typedContent.AddMemberDelayed(fun () -> ProvidedProperty("UTF8", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ RuntimeHelper.getUtf8String(contents) @@>)))
@@ -130,11 +114,11 @@ module internal Helpers =
         typedContent
 
     /// Create a nested type to represent a non-versioned S3 object
-    let createTypedS3Object (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) typeName (s3Object : Amazon.S3.Model.S3Object) = 
+    let createTypedS3Object (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) typeName (s3Object : IS3Object) = 
         let typeName = 
             match typeName, s3Object with 
             | Some name, _ -> name 
-            | _, (:? Amazon.S3.Model.S3ObjectVersion as s3ObjectVersion)
+            | _, (:? IS3ObjectVersion as s3ObjectVersion)
                 -> if s3ObjectVersion.IsLatest 
                    then sprintf "(%s, Latest) %s" (s3ObjectVersion.LastModified.ToString("yyyy-MM-dd HH:mm:ss")) s3ObjectVersion.VersionId
                    else sprintf "(%s) %s" (s3ObjectVersion.LastModified.ToString("yyyy-MM-dd HH:mm:ss")) s3ObjectVersion.VersionId
@@ -150,54 +134,54 @@ module internal Helpers =
         typedS3Object.AddMember(ProvidedProperty("LastModified", typeof<DateTime>, IsStatic = true, GetterCode = (fun args -> <@@ RuntimeHelper.getDateTime(lastModified) @@>)))
         typedS3Object.AddMember(ProvidedProperty("OwnerId", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ ownerId @@>)))
         typedS3Object.AddMember(ProvidedProperty("OwnerName", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ ownerName @@>)))
-        typedS3Object.AddMemberDelayed(fun () -> createTypedContent typedS3Object client bucket None s3Object)
+        typedS3Object.AddMemberDelayed(fun () -> createTypedContent typedS3Object awsCred bucket s3Object)
 
         typedS3Object
 
     /// Create a nested type to represent a versioned S3 object
-    let createTypedVersionedS3Object (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) (s3Object : Amazon.S3.Model.S3Object) =
+    let createTypedVersionedS3Object (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) (s3Object : IS3Object) =
         let typedS3Object = getPrettyS3ObjectName s3Object |> runtimeType<obj>
         typedS3Object.AddXmlDoc(sprintf "A strongly typed interface to a versioned S3 object %s" s3Object.Key)
 
         // nested type to represent the latest version of the object
-        typedS3Object.AddMember(createTypedS3Object ownerType client bucket (Some "Latest") s3Object)
+        typedS3Object.AddMember(createTypedS3Object ownerType awsCred bucket (Some "Latest") s3Object)
 
         // then a nested type called Versions to represent all the versions of the object
         let typedS3ObjectVersions = runtimeType<obj> "Versions"
         typedS3Object.AddMember(typedS3ObjectVersions)
         typedS3ObjectVersions.AddMembersDelayed(fun () ->
-            let versions = getObjectVersions client bucket s3Object
-            versions |> Seq.map (createTypedS3Object ownerType client bucket None) |> Seq.toList)
+            let versions = getObjectVersions awsCred bucket s3Object
+            versions |> Seq.map (createTypedS3Object ownerType awsCred bucket None) |> Seq.toList)
 
         typedS3Object
 
     /// Create a nested type to represent a S3 folder
-    let rec createTypedS3Folder (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned prefix folderName =
+    let rec createTypedS3Folder (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) isVersioned prefix folderName =
         let typedFolder = runtimeType<obj> folderName
         typedFolder.AddXmlDoc(sprintf "A strongly typed interface to a S3 folder %s" prefix)
 
-        typedFolder.AddMembersDelayed(fun () -> createTypedS3Entries typedFolder client bucket isVersioned prefix)
+        typedFolder.AddMembersDelayed(fun () -> createTypedS3Entries typedFolder awsCred bucket isVersioned prefix)
 
         typedFolder
 
     /// Create a nested type to represent a S3 entry (either Folder or S3Object)
-    and createTypedS3Entry (ownerType : ProvidedTypeDefinition) client bucket isVersioned = function
-        | Folder(Prefix prefix, FolderName folderName) -> createTypedS3Folder ownerType client bucket isVersioned prefix folderName
-        | S3Object(s3Object) when isVersioned -> createTypedVersionedS3Object ownerType client bucket s3Object
-        | S3Object(s3Object) -> createTypedS3Object ownerType client bucket None s3Object
+    and createTypedS3Entry (ownerType : ProvidedTypeDefinition) awsCred bucket isVersioned = function
+        | Folder(Prefix prefix, FolderName folderName) -> createTypedS3Folder ownerType awsCred bucket isVersioned prefix folderName
+        | S3Object(s3Object) when isVersioned -> createTypedVersionedS3Object ownerType awsCred bucket s3Object
+        | S3Object(s3Object) -> createTypedS3Object ownerType awsCred bucket None s3Object
 
     /// Create and return the list of nested types representing entries that are returned by the given prefix
-    and createTypedS3Entries (ownerType : ProvidedTypeDefinition) client bucket isVersioned prefix =
-        let (isTruncated, entries) = getObjects client bucket (Prefix prefix)
+    and createTypedS3Entries (ownerType : ProvidedTypeDefinition) awsCred bucket isVersioned prefix =
+        let (isTruncated, entries) = getObjects awsCred bucket (Prefix prefix)
 
         seq {
-            yield! entries |> Seq.map (createTypedS3Entry ownerType client bucket isVersioned)
+            yield! entries |> Seq.map (createTypedS3Entry ownerType awsCred bucket isVersioned)
             if isTruncated then yield runtimeType<obj> "Too many results, use Search<...> instead"
         }
         |> Seq.toList
 
     /// Create a nested parametric type to represent a Search
-    let createTypedSearch (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) isVersioned =
+    let createTypedSearch (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) isVersioned =
         let genericSearch = runtimeType<obj> "Search"
         
         let typeParams = [ ProvidedStaticParameter("prefix", typeof<string>) ]
@@ -206,7 +190,7 @@ module internal Helpers =
             | [| :? string as prefix |] ->
                 let typedSearch = runtimeType<obj> typeName
                 typedSearch.AddXmlDoc(sprintf "A strongly typed interface to a S3 search with prefix [%s]" prefix)
-                typedSearch.AddMembersDelayed(fun () -> createTypedS3Entries typedSearch client bucket isVersioned prefix)
+                typedSearch.AddMembersDelayed(fun () -> createTypedS3Entries typedSearch awsCred bucket isVersioned prefix)
 
                 ownerType.AddMember(typedSearch)
                 typedSearch
@@ -215,17 +199,17 @@ module internal Helpers =
         genericSearch
 
     /// Create a nested type to represent a S3 bucket
-    let createTypedBucket (ownerType : ProvidedTypeDefinition) client (bucket : Amazon.S3.Model.S3Bucket) =
-        let typedBucket = runtimeType<obj> bucket.BucketName
+    let createTypedBucket (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) =
+        let typedBucket = runtimeType<obj> bucket.Name
         typedBucket.AddXmlDoc(sprintf "A strongly typed interface to S3 bucket %s which was created on %A" 
-                                      bucket.BucketName bucket.CreationDate)
+                                      bucket.Name bucket.CreationDate)
 
         typedBucket.AddMember(ProvidedProperty("CreationDate", typeof<DateTime>, IsStatic = true, GetterCode = (fun args -> <@@ bucket.CreationDate @@>)))
         typedBucket.AddMembersDelayed(fun () -> 
-            let isVersioned = isBucketVersioned client bucket
+            let isVersioned = isBucketVersioned awsCred bucket
             
-            let typedSearch = createTypedSearch typedBucket client bucket isVersioned
-            let typedEntries = createTypedS3Entries typedBucket client bucket isVersioned "" // use empty string as prefix for the top level bucket
+            let typedSearch = createTypedSearch typedBucket awsCred bucket isVersioned
+            let typedEntries = createTypedS3Entries typedBucket awsCred bucket isVersioned "" // use empty string as prefix for the top level bucket
                 
             typedSearch :: typedEntries)
 
@@ -242,9 +226,9 @@ module internal Helpers =
                 let typedS3Account = erasedType<obj> thisAssembly rootNamespace typeName
                 typedS3Account.AddXmlDoc(sprintf "A strongly typed interface to S3 account with key [%s] and secret [%s]" awsKey awsSecret)
 
-                let client  = Amazon.AWSClientFactory.CreateAmazonS3Client(awsKey, awsSecret, Amazon.RegionEndpoint.USEast1)
+                let awsCred = { AwsKey = awsKey; AwsSecret = awsSecret }
 
-                typedS3Account.AddMembersDelayed(fun () -> getBuckets client |> Seq.map (createTypedBucket typedS3Account client) |> Seq.toList)
+                typedS3Account.AddMembersDelayed(fun () -> getBuckets awsCred |> Seq.map (createTypedBucket typedS3Account awsCred) |> Seq.toList)
 
                 typedS3Account
 
