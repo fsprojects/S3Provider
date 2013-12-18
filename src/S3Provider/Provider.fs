@@ -201,10 +201,12 @@ module internal Helpers =
     /// Create a nested type to represent a S3 bucket
     let createTypedBucket (ownerType : ProvidedTypeDefinition) awsCred (bucket : Bucket) =
         let typedBucket = runtimeType<obj> bucket.Name
+
         typedBucket.AddXmlDoc(sprintf "A strongly typed interface to S3 bucket %s which was created on %A" 
                                       bucket.Name bucket.CreationDate)
-
-        typedBucket.AddMember(ProvidedProperty("CreationDate", typeof<DateTime>, IsStatic = true, GetterCode = (fun args -> <@@ bucket.CreationDate @@>)))
+        
+        let creationDate = bucket.CreationDate.ToString()
+        typedBucket.AddMember(ProvidedProperty("CreationDate", typeof<DateTime>, IsStatic = true, GetterCode = (fun args -> <@@ RuntimeHelper.getDateTime(creationDate) @@>)))
         typedBucket.AddMembersDelayed(fun () -> 
             let isVersioned = isBucketVersioned awsCred bucket
             
