@@ -31,3 +31,8 @@ An experimental type provider for **Amazon S3**.
 
 	// you can then navigate through the search results the same as before!
 	let searchResultContent = search.``2013-12-13``.``My file.txt``.Content.Raw
+
+	
+### Demo Video
+
+[![ScreenShot](https://raw.github.com/theburningmonk/S3Provider/develop/docs/files/img/demo_screenshot.png)](http://www.youtube.com/watch?v=LOU00RlArqg)
