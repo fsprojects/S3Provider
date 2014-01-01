@@ -31,3 +31,6 @@ An experimental type provider for **Amazon S3**.
 
 	// you can then navigate through the search results the same as before!
 	let searchResultContent = search.``2013-12-13``.``My file.txt``.Content.Raw
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/theburningmonk/s3provider/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
