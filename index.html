@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>S3 Type Provider by theburningmonk</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>S3 Type Provider</h1>
+        <p>Experimental type provider for Amazon S3</p>
+
+        <p class="view"><a href="https://github.com/theburningmonk/S3Provider">View the Project on GitHub <small>theburningmonk/S3Provider</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/theburningmonk/S3Provider/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/theburningmonk/S3Provider/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/theburningmonk/S3Provider">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a name="s3-type-provider" class="anchor" href="#s3-type-provider"><span class="octicon octicon-link"></span></a>S3 Type Provider</h1>
+
+<p>A F# type provider for <strong>Amazon S3</strong>.</p>
+
+<h3>
+<a name="example" class="anchor" href="#example"><span class="octicon octicon-link"></span></a>Example</h3>
+
+<div class="highlight highlight-fsharp"><pre>
+<span class="c1">// create a type representing the S3 account with the specified AWS credentials</span>
+<span class="k">type</span> <span class="nc">S3</span> <span class="o">=</span> <span class="nn">S3Provider</span><span class="p">.</span><span class="n">Account</span><span class="o">&lt;</span><span class="s">"AWS Key"</span><span class="o">,</span> <span class="s">"AWS Secret"</span><span class="o">&gt;</span>
+
+<span class="c1">// then access meta-data and content of objects in S3 with full intellisense support!</span>
+
+<span class="c1">// immediately after the type representing the account are all the buckets</span>
+<span class="k">type</span> <span class="nc">bucket</span> <span class="o">=</span> <span class="nn">S3</span><span class="p">.</span><span class="err">``</span><span class="n">my</span><span class="o">.</span><span class="n">bucket</span><span class="o">``</span>
+
+<span class="c1">// you can then select folders/files from that bucket</span>
+<span class="k">type</span> <span class="nc">folder</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.``</span><span class="mi">2013</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">13</span><span class="o">/``</span>
+
+<span class="c1">// on files, you can get meta-data such as ETag, LastModified, or fetch the content as</span>
+<span class="c1">//      * Raw   - raw binary array</span>
+<span class="c1">//      * UTF8  - the content as decoded using UTF8</span>
+<span class="c1">//      * ASCII - the content as decoded using ASCII</span>
+<span class="k">let</span> <span class="nv">etag</span> <span class="o">=</span> <span class="n">folder</span><span class="o">.``</span><span class="n">My</span> <span class="n">file</span><span class="o">.</span><span class="n">txt</span><span class="o">``.</span><span class="n">ETag</span>
+<span class="k">let</span> <span class="nv">utf8</span> <span class="o">=</span> <span class="n">folder</span><span class="o">.``</span><span class="n">My</span> <span class="n">file</span><span class="o">.</span><span class="n">txt</span><span class="o">``.</span><span class="n">Content</span><span class="o">.</span><span class="n">UTF8</span>
+<span class="k">let</span> <span class="nv">raw</span>  <span class="o">=</span> <span class="n">folder</span><span class="o">.``</span><span class="n">My</span> <span class="n">image</span><span class="o">.</span><span class="n">png</span><span class="o">``.</span><span class="n">Content</span><span class="o">.</span><span class="n">Raw</span>
+<span class="k">let</span> <span class="nv">lastModified</span> <span class="o">=</span> <span class="n">folder</span><span class="o">.``</span><span class="n">My</span> <span class="n">image</span><span class="o">.</span><span class="n">png</span><span class="o">``.</span><span class="n">LastModified</span>
+
+<span class="c1">// if the bucket/folder is large, you can also use the `Search&lt;...&gt;` generic type to find</span>
+<span class="c1">// files in the bucket by prefix</span>
+<span class="k">type</span> <span class="nc">search</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">Search</span><span class="o">&lt;</span><span class="s">"2013-12-"</span><span class="o">&gt;</span>
+
+<span class="c1">// you can then navigate through the search results the same as before!</span>
+<span class="k">let</span> <span class="nv">searchResultContent</span> <span class="o">=</span> <span class="n">search</span><span class="o">.``</span><span class="mi">2013</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">13</span><span class="o">``.``</span><span class="n">My</span> <span class="n">file</span><span class="o">.</span><span class="n">txt</span><span class="o">``.</span><span class="n">Content</span><span class="o">.</span><span class="n">Raw</span>
+</pre></div>
+
+<h3>
+<a name="demo-video" class="anchor" href="#demo-video"><span class="octicon octicon-link"></span></a>Demo Video</h3>
+
+<p><a href="http://www.youtube.com/watch?v=LOU00RlArqg"><img src="https://raw.github.com/theburningmonk/S3Provider/develop/docs/files/img/demo_screenshot.png" alt="ScreenShot"></a></p>
+
+<p><a href="https://bitdeli.com/free" title="Bitdeli Badge"><img src="https://d2weczhvl823v0.cloudfront.net/theburningmonk/s3provider/trend.png" alt="Bitdeli Badge"></a></p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/theburningmonk">theburningmonk</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-12216268-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
