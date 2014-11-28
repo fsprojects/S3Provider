@@ -38,3 +38,9 @@ let searchResultContent = search.``2013-12-13``.``My file.txt``.Content.Raw
 ### Demo Video
 
 [![ScreenShot](https://raw.github.com/theburningmonk/S3Provider/develop/docs/files/img/demo_screenshot.png)](http://www.youtube.com/watch?v=LOU00RlArqg)
+
+### Maintainer(s)
+
+- [@theburningmonk](https://github.com/theburningmonk)
+
+The default maintainer account for projects under "fsprojects" is [@fsgit](https://github.com/fsgit) - F# Community Project Incubation Space (repo management)
