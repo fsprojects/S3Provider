@@ -1,4 +1,7 @@
-S3 Type Provider
+[![Issue Stats](http://issuestats.com/github/fsprojects/S3Provider/badge/issue)](http://issuestats.com/github/fsprojects/S3Provider)
+[![Issue Stats](http://issuestats.com/github/fsprojects/S3Provider/badge/pr)](http://issuestats.com/github/fsprojects/S3Provider)
+
+S3 Type Provider [![NuGet Status](http://img.shields.io/nuget/v/S3Provider.svg?style=flat)](https://www.nuget.org/packages/S3Provider/)
 =======================
 
 A F# type provider for **Amazon S3**.
