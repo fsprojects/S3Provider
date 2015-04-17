@@ -96,16 +96,14 @@ Target "Build" (fun _ ->
 // Run the unit tests using test runner & kill test runner when complete
 
 Target "RunTests" (fun _ ->
-    ActivateFinalTarget "CloseTestRunner"
+    let result =
+        ExecProcess (fun info ->
+            info.FileName <- "tests/S3Provider.Tests/bin/Debug/S3Provider.Tests.exe"
+        ) (System.TimeSpan.FromSeconds(30.))
 
-    { BaseDirectory = __SOURCE_DIRECTORY__
-      Includes = testAssemblies
-      Excludes = [] } 
-    |> NUnit (fun p ->
-        { p with
-            DisableShadowCopy = true
-            TimeOut = TimeSpan.FromMinutes 20.
-            OutputFile = "TestResults.xml" })
+    match result with
+    | 0 -> ()
+    | _ -> failwith "Unit-tests failed."
 )
 
 FinalTarget "CloseTestRunner" (fun _ ->  
